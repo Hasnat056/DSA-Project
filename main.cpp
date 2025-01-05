@@ -8,7 +8,7 @@ using namespace std;
 
 //HASH FUNCTION
 class Hash {
-    int BUCKET;
+    int size;
     list<int>* table;
     struct Student {
         int ID;
@@ -18,17 +18,17 @@ class Hash {
         double CGPA;
     };
 
-    string filename = "students_data.txt";
+    string filename = "students_data.csv";
 
 public:
-    Hash(int b) {
-        this->BUCKET = b;
-        table = new list<int>[BUCKET];
+    Hash(int size) {
+        this->size = size;
+        table = new list<int>[this->size];
         loadFromFile();
     }
 
     int hashFunction(int x) {
-        return (x % BUCKET);
+        return (x % this->size);
     }
 
     void insertdata() {
@@ -36,10 +36,11 @@ public:
         cout << "KINDLY ENTER STUDENT'S INFORMATION" << endl;
         cout << "ENTER THE ID OF THE STUDENT..........  ";
         cin >> student.ID;
+        cin.ignore();
         cout << "ENTER THE NAME OF THE STUDENT........  ";
-        cin >> student.Name;
+        getline(cin,student.Name);
         cout << "ENTER THE DEPARTMENT OF THE STUDENT..  ";
-        cin >> student.Department;
+        getline(cin,student.Department);
         cout << "ENTER CURRENT SEMESTER OF THE STUDENT. ";
         cin >> student.Semester;
         cout << "ENTER THE CGPA OF THE STUDENT........  ";
@@ -113,7 +114,7 @@ public:
     }
 
     void displayHash() {
-        for (int i = 0; i < BUCKET; i++) {
+        for (int i = 0; i < this->size; i++) {
             cout << i;
             for (auto x : table[i])
                 cout << " --> " << x;
@@ -134,7 +135,7 @@ private:
 
     void removeFromFile(int id) {
         ifstream inFile(filename);
-        ofstream tempFile("temp.txt");
+        ofstream tempFile("temp.csv");
 
         if (!inFile.is_open() || !tempFile.is_open()) {
             cout << "ERROR: FILE OPERATION FAILED." << endl;
@@ -159,7 +160,7 @@ private:
         inFile.close();
         tempFile.close();
         remove(filename.c_str());
-        rename("temp.txt", filename.c_str());
+        rename("temp.csv", filename.c_str());
     }
 
     Student getFromFile(int id) {
@@ -232,7 +233,7 @@ int main() {
     getch();
     system("cls");
 
-    Hash h(10); // Create hash table with 10 buckets
+    Hash h(1000); // Create hash table with 10 buckets
 
     cout << "1. ADMIN LOGIN\n2. STUDENT LOGIN" << endl;
     cin >> choice;
