@@ -1,13 +1,15 @@
 #include <iostream>
-#include <conio.h>
-#include <list>
 #include <fstream>
 #include <sstream>
-#include <stdexcept> // To handle exceptions
+#include <list>
+#include <stdexcept>
+#include <string> // For handling strings
+#include <conio.h>
 using namespace std;
 
-//HASH FUNCTION
+// HASH FUNCTION
 class Hash {
+
     int size;
     list<int>* table;
     struct Student {
@@ -18,17 +20,18 @@ class Hash {
         double CGPA;
     };
 
-    string filename = "students_data.csv";
+    string dataFilename = "students_data.csv";
+    string indexFilename = "index.csv";
 
 public:
     Hash(int size) {
         this->size = size;
-        table = new list<int>[this->size];
-        loadFromFile();
+        table = new list<int>[size];
+        loadIndexFromFile();
     }
 
     int hashFunction(int x) {
-        return (x % this->size);
+        return (x % size);
     }
 
     void insertdata() {
@@ -38,9 +41,9 @@ public:
         cin >> student.ID;
         cin.ignore();
         cout << "ENTER THE NAME OF THE STUDENT........  ";
-        getline(cin,student.Name);
+        getline(cin, student.Name);
         cout << "ENTER THE DEPARTMENT OF THE STUDENT..  ";
-        getline(cin,student.Department);
+        getline(cin, student.Department);
         cout << "ENTER CURRENT SEMESTER OF THE STUDENT. ";
         cin >> student.Semester;
         cout << "ENTER THE CGPA OF THE STUDENT........  ";
@@ -55,9 +58,15 @@ public:
             }
         }
 
+        // Append data to main file and capture offset
+         appendToFile(student); // Get offset directly from appendToFile
+
+        // Add ID and offset to index file
+       // appendToIndexFile(student.ID, offset);
+
+        // Add ID to hash table
         table[index].push_back(student.ID);
-        appendToFile(student);
-        cout << "STUDENT DATA INSERTED SUCCESSFULLY." << endl;
+       // cout << "STUDENT DATA INSERTED SUCCESSFULLY." << endl;
     }
 
     void deletedata(int key) {
@@ -66,13 +75,13 @@ public:
         for (auto it = table[index].begin(); it != table[index].end(); ++it) {
             if (*it == key) {
                 table[index].erase(it);
-                removeFromFile(key);
-                cout << "STUDENT DATA DELETED SUCCESSFULLY." << endl;
+                removeFromIndexFile(key); // Delete only from the index file
+                cout << "STUDENT DATA DELETED SUCCESSFULLY FROM INDEX." << endl;
                 return;
             }
         }
 
-        cout << "FAILED: STUDENT WITH THIS ID NOT FOUND." << endl;
+        cout << "FAILED: STUDENT WITH THIS ID NOT FOUND IN INDEX." << endl;
     }
 
     bool searchh(int key) {
@@ -80,14 +89,19 @@ public:
 
         for (int id : table[index]) {
             if (id == key) {
-                Student student = getFromFile(key);
-                if (student.ID != -1) {
-                    cout << "STUDENT FOUND: " << endl;
-                    cout << "ID: " << student.ID << endl;
-                    cout << "Name: " << student.Name << endl;
-                    cout << "Department: " << student.Department << endl;
-                    cout << "Semester: " << student.Semester << endl;
-                    cout << "CGPA: " << student.CGPA << endl;
+                streampos offset = getOffsetFromIndexFile(key);
+                if (offset != -1) {
+                    Student student = getFromFile(offset);
+                    if (student.ID != -1) {
+                        cout << "STUDENT FOUND: " << endl;
+                        cout << "ID: " << student.ID << endl;
+                        cout << "Name: " << student.Name << endl;
+                        cout << "Department: " << student.Department << endl;
+                        cout << "Semester: " << student.Semester << endl;
+                        cout << "CGPA: " << student.CGPA << endl;
+                    }
+                } else {
+                    cout << "STUDENT WITH THIS ID EXISTS IN HASH TABLE BUT NOT IN INDEX." << endl;
                 }
                 return true;
             }
@@ -103,7 +117,11 @@ public:
         for (int id : table[index]) {
             if (id == key) {
                 cout << "STUDENT FOUND. ENTER UPDATED INFORMATION:" << endl;
+
+                // Remove the old entry
                 deletedata(key);
+
+                // Insert the updated record
                 insertdata();
                 return true;
             }
@@ -124,21 +142,62 @@ public:
 
 private:
     void appendToFile(Student student) {
-        ofstream outFile(filename, ios::app);
-        if (outFile.is_open()) {
-            outFile << student.ID << "," << student.Name << "," << student.Department << "," << student.Semester << "," << student.CGPA << endl;
-            outFile.close();
+        // Open main data file in append mode
+        ofstream outFile(dataFilename, ios::in | ios::out | ios::app);  // Open for reading and writing
+
+        if (!outFile.is_open()) {
+            cout << "ERROR: COULD NOT OPEN DATA FILE TO WRITE." << endl;
+            return;
+        }
+
+        // Move file pointer to the end and capture the offset
+        outFile.seekp(0, ios::end);
+        streampos offset = outFile.tellp();
+
+        // Write the student data to the data file
+        outFile << student.ID << "," << student.Name << "," << student.Department << "," << student.Semester << "," << student.CGPA << endl;
+
+        // Ensure data is written to the file
+        outFile.flush();
+        outFile.close();
+
+        // Debugging: Print captured offset to see its value
+        cout << "Captured Offset: " << offset << endl;
+
+        // Open index file in append mode
+        ofstream indexFile(indexFilename, ios::app);
+        if (!indexFile.is_open()) {
+            cout << "ERROR: COULD NOT OPEN INDEX FILE TO WRITE." << endl;
+            return;
+        }
+
+        // Write ID and offset to the index file
+        indexFile << student.ID << "," << offset << endl;
+        indexFile.close();
+
+        cout << "STUDENT DATA INSERTED SUCCESSFULLY." << endl;
+    }
+
+
+
+
+
+    void appendToIndexFile(int id, streampos offset) {
+        ofstream indexFile(indexFilename, ios::app);
+        if (indexFile.is_open()) {
+            indexFile << id << "," << offset << endl;
+            indexFile.close();
         } else {
-            cout << "ERROR: COULD NOT OPEN FILE TO WRITE." << endl;
+            cout << "ERROR: COULD NOT OPEN INDEX FILE TO WRITE." << endl;
         }
     }
 
-    void removeFromFile(int id) {
-        ifstream inFile(filename);
-        ofstream tempFile("temp.csv");
+    void removeFromIndexFile(int id) {
+        ifstream inFile(indexFilename);
+        ofstream tempFile("temp_index.csv");
 
         if (!inFile.is_open() || !tempFile.is_open()) {
-            cout << "ERROR: FILE OPERATION FAILED." << endl;
+            cout << "ERROR: INDEX FILE OPERATION FAILED." << endl;
             return;
         }
 
@@ -152,24 +211,21 @@ private:
                     tempFile << line << endl;
                 }
             } catch (const invalid_argument&) {
-                // Handle invalid data in file gracefully
-                cout << "ERROR: Invalid data encountered in file. Skipping line." << endl;
+                cout << "ERROR: Invalid data encountered in index file. Skipping line." << endl;
             }
         }
 
         inFile.close();
         tempFile.close();
-        remove(filename.c_str());
-        rename("temp.csv", filename.c_str());
+        remove(indexFilename.c_str());
+        rename("temp_index.csv", indexFilename.c_str());
     }
 
-    Student getFromFile(int id) {
-        ifstream inFile(filename);
-        Student student = {-1, "", "", -1, -1.0};
-
+    streampos getOffsetFromIndexFile(int id) {
+        ifstream inFile(indexFilename);
         if (!inFile.is_open()) {
-            cout << "ERROR: COULD NOT OPEN FILE TO READ." << endl;
-            return student;
+            cout << "ERROR: COULD NOT OPEN INDEX FILE TO READ." << endl;
+            return -1;
         }
 
         string line;
@@ -179,29 +235,53 @@ private:
             getline(ss, token, ',');
             try {
                 if (stoi(token) == id) {
-                    student.ID = stoi(token);
-                    getline(ss, student.Name, ',');
-                    getline(ss, student.Department, ',');
-                    ss >> student.Semester;
-                    ss.ignore();
-                    ss >> student.CGPA;
-                    break;
+                    // Read the offset from the index file
+                    string offsetStr;
+                    getline(ss, offsetStr);
+                    streampos offset = static_cast<streampos>(stoll(offsetStr)); // Convert string to streampos
+                    inFile.close();
+                    return offset;
                 }
             } catch (const invalid_argument&) {
-                // Handle invalid data in file gracefully
-                cout << "ERROR: Invalid data encountered in file. Skipping line." << endl;
+                cout << "ERROR: Invalid data encountered in index file. Skipping line." << endl;
             }
         }
+
+        inFile.close();
+        return -1;
+    }
+
+    Student getFromFile(streampos offset) {
+        ifstream inFile(dataFilename);
+        Student student = {-1, "", "", -1, -1.0};
+
+        if (!inFile.is_open()) {
+            cout << "ERROR: COULD NOT OPEN DATA FILE TO READ." << endl;
+            return student;
+        }
+
+        inFile.seekg(offset);
+        string line;
+        getline(inFile, line);
+
+        stringstream ss(line);
+        getline(ss, line, ',');
+        student.ID = stoi(line);
+        getline(ss, student.Name, ',');
+        getline(ss, student.Department, ',');
+        ss >> student.Semester;
+        ss.ignore();
+        ss >> student.CGPA;
 
         inFile.close();
         return student;
     }
 
-    void loadFromFile() {
-        ifstream inFile(filename);
+    void loadIndexFromFile() {
+        ifstream inFile(indexFilename);
 
         if (!inFile.is_open()) {
-            cout << "ERROR: COULD NOT OPEN FILE TO READ." << endl;
+            cout << "ERROR: COULD NOT OPEN INDEX FILE TO READ." << endl;
             return;
         }
 
@@ -214,8 +294,7 @@ private:
                 int id = stoi(token);
                 table[hashFunction(id)].push_back(id);
             } catch (const invalid_argument&) {
-                // Handle invalid data in file gracefully
-                cout << "ERROR: Invalid data encountered in file. Skipping line." << endl;
+                cout << "ERROR: Invalid data encountered in index file. Skipping line." << endl;
             }
         }
 
@@ -223,15 +302,11 @@ private:
     }
 };
 
+
 // Main function
 int main() {
     int choice, adminPass;
-
-    cout << "LOADING..." << endl;
-    system("cls");
     cout << "WELCOME TO THE STUDENT DATABASE MANAGEMENT SYSTEM" << endl;
-    getch();
-    system("cls");
 
     Hash h(1000); // Create hash table with 10 buckets
 
