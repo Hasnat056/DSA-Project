@@ -41,9 +41,9 @@ public:
         cin >> student.ID;
         cin.ignore();
         cout << "ENTER THE NAME OF THE STUDENT........  ";
-        getline(cin, student.Name);
+        cin  >> student.Name;
         cout << "ENTER THE DEPARTMENT OF THE STUDENT..  ";
-        getline(cin, student.Department);
+        cin >> student.Department;
         cout << "ENTER CURRENT SEMESTER OF THE STUDENT. ";
         cin >> student.Semester;
         cout << "ENTER THE CGPA OF THE STUDENT........  ";
