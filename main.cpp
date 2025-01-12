@@ -9,7 +9,7 @@ using namespace std;
 
 // HASH FUNCTION
 class Hash {
-
+protected:
     int size;
     list<int>* table;
     struct Student {
@@ -24,8 +24,8 @@ class Hash {
     string indexFilename = "index.csv";
 
 public:
-    Hash(int size) {
-        this->size = size;
+    Hash() {
+        this->size = 1000;
         table = new list<int>[size];
         loadIndexFromFile();
     }
@@ -140,7 +140,7 @@ public:
         }
     }
 
-private:
+protected:
     void appendToFile(Student student) {
         // Open main data file in append mode
         ofstream outFile(dataFilename, ios::in | ios::out | ios::app);  // Open for reading and writing
@@ -301,69 +301,121 @@ private:
         inFile.close();
     }
 };
+class StudentClass : public Hash {
+public:
+    StudentClass () = default;
+   void getdata () {
+       cin.ignore();
+       cout << "ENTER YOUR NAME:";
+        string name;
+        getline(cin,name);
+        cout << "ENTER YOUR ID:";
+        int key;
+        cin >> key;
+        int index = hashFunction(key);
 
+        for (int id : table[index]) {
+            if (id == key) {
+                const streampos offset = getOffsetFromIndexFile(key);
+                if (offset != -1) {
+                    Student student = getFromFile(offset);
+                        if (student.Name== name) {
+                            cout << "ID: " << student.ID << endl;
+                            cout << "Name: " << student.Name << endl;
+                            cout << "Department: " << student.Department << endl;
+                            cout << "Semester: " << student.Semester << endl;
+                            cout << "CGPA: " << student.CGPA << endl;
+                            return;
+                        }
+                    cout << "NAME MISMATCHED!"<<endl;
+                    return;
+                }
+                cout << "STUDENT WITH THIS ID EXISTS IN HASH TABLE BUT NOT IN INDEX." << endl;
+                return;
+            }
+        }
+        cout << "ID DOESN'T EXIST" << endl;
+    }
+};
 
 // Main function
 int main() {
     int choice, adminPass;
     cout << "WELCOME TO THE STUDENT DATABASE MANAGEMENT SYSTEM" << endl;
 
-    Hash h(1000); // Create hash table with 10 buckets
+    Hash h; // Create hash table with 10 buckets
+    while (true) {
+        cout << "1. ADMIN LOGIN\n2. STUDENT LOGIN\n3. EXIT" << endl;
+        cin >> choice;
 
-    cout << "1. ADMIN LOGIN\n2. STUDENT LOGIN" << endl;
-    cin >> choice;
+        if (choice==1) {
+            cout << "ENTER ADMIN PASSWORD: ";
+            cin >> adminPass;
+            if (adminPass == 1234) {
+                int action;
+                do {
+                    cout << "1. INSERT\n2. DELETE\n3. SEARCH\n4. UPDATE\n5. DISPLAY\n6. EXIT" << endl;
+                    cin >> action;
+                    switch (action) {
+                        case 1:
+                            cout << "How many students' data you want to insert? ";
+                        int number;
+                        cin >> number;
+                        for (int i=0; i<number; i++) {
+                            h.insertdata();
+                        }
+                        break;
+                        case 2:
+                            int idToDelete;
+                        cout << "ENTER ID TO DELETE: ";
+                        cin >> idToDelete;
+                        h.searchh(idToDelete);
+                        cout << "Press 1 to confirm 0 to exit: ";
+                        int num;
+                        cin>> num;
+                        if (num==1) {
+                            h.deletedata(idToDelete);
+                            break;
+                        }
+                        break;
 
-    switch (choice) {
-    case 1:
-        cout << "ENTER ADMIN PASSWORD: ";
-        cin >> adminPass;
-        if (adminPass == 1234) {
-            int action;
-            do {
-                cout << "1. INSERT\n2. DELETE\n3. SEARCH\n4. UPDATE\n5. DISPLAY\n6. EXIT" << endl;
-                cin >> action;
-                switch (action) {
-                case 1:
-                    h.insertdata();
-                    break;
-                case 2:
-                    int idToDelete;
-                    cout << "ENTER ID TO DELETE: ";
-                    cin >> idToDelete;
-                    h.deletedata(idToDelete);
-                    break;
-                case 3:
-                    int idToSearch;
-                    cout << "ENTER ID TO SEARCH: ";
-                    cin >> idToSearch;
-                    h.searchh(idToSearch);
-                    break;
-                case 4:
-                    int idToUpdate;
-                    cout << "ENTER ID TO UPDATE: ";
-                    cin >> idToUpdate;
-                    h.update(idToUpdate);
-                    break;
-                case 5:
-                    h.displayHash();
-                    break;
-                case 6:
-                    cout << "EXITING..." << endl;
-                    break;
-                default:
-                    cout << "INVALID OPTION. TRY AGAIN." << endl;
-                }
-            } while (action != 6);
-        } else {
-            cout << "INCORRECT PASSWORD." << endl;
+                        case 3:
+                            int idToSearch;
+                        cout << "ENTER ID TO SEARCH: ";
+                        cin >> idToSearch;
+                        h.searchh(idToSearch);
+                        break;
+                        case 4:
+                            int idToUpdate;
+                        cout << "ENTER ID TO UPDATE: ";
+                        cin >> idToUpdate;
+                        h.update(idToUpdate);
+                        break;
+                        case 5:
+                            h.displayHash();
+                        break;
+                        case 6:
+                            cout << "EXITING..." << endl;
+                        break;
+                        default:
+                            cout << "INVALID OPTION. TRY AGAIN." << endl;
+                    }
+                } while (action != 6);
+            } else {
+                cout << "INCORRECT PASSWORD." << endl;
+            }
         }
-        break;
-    case 2:
-        cout << "STUDENT LOGIN FEATURE NOT IMPLEMENTED YET." << endl;
-        break;
-    default:
-        cout << "INVALID CHOICE." << endl;
+        if (choice==2) {
+            StudentClass obj1;
+            obj1.getdata();
+            cout << endl;
+        }
+        if (choice==3) {
+            cout << "THANK YOU FOR USING OUR SYSTEM"<<endl;
+            break;
+        }
+        if (choice!=1 || (choice !=2 || choice!=3))
+        { cout << "INVALID CHOICE." << endl;}
     }
-
     return 0;
 }
